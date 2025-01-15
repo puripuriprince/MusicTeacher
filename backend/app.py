@@ -103,6 +103,10 @@ def generate_practice_song():
     instrument = data.get('instrument')
     genre = data.get('genre', 'Pop')
     
+    # Validate instrument
+    if instrument not in ["Piano", "Guitar", "Ukelele", "Voice"]:
+        return jsonify({'error': 'Invalid instrument selected'}), 400
+    
     practice_material = music_generator.generate_practice_material(
         performance_data=None,
         skill_level=skill_level,
