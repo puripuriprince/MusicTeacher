@@ -8,6 +8,17 @@ Welcome to MusicTeacher, your AI-powered music learning companion! This app leve
 -   **Practice Songs:** MusicTeacher generates practice songs tailored to your skill level and instrument. You'll receive sheet music, audio playback, and additional notes to guide your practice.
 -   **Progress Tracker:** Track your musical journey and improvement over time with scores and visualizations. (Coming soon!)
 
+## 👩‍💻 Running
+### Backend 
+``` zsh
+cd backend
+python app.py
+```
+### Frontend
+cd fronted
+streamlit run app.py
+```
+
 ## 🛠️ Technologies Used
 
 -   **Frontend:** [Streamlit](https://streamlit.io/) (A modern and efficient alternative to React, ideal for rapid prototyping and data-driven applications)
