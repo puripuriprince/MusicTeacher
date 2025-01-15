@@ -5,6 +5,14 @@ import io
 import tempfile
 import plotly.graph_objects as go
 import numpy as np
+import base64
+import os
+import atexit
+from pathlib import Path
+
+# Set up static directory path
+STATIC_DIR = Path("static/sheet_music").absolute()
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
 # Set page configuration and custom CSS
 st.set_page_config(page_title="Music Learning Assistant", layout="wide")
@@ -253,6 +261,16 @@ def show_upload_page():
                         ultra_class='ultra' if overall_grade == 'ULTRA' else ''
                     ), unsafe_allow_html=True)
                     
+                    if 'performance_summary' in feedback['summary']:
+                        st.markdown("""
+                        <div style='background: #242424; padding: 1.5rem; border-radius: 15px; margin: 2rem 0;'>
+                            <h3 style='color: white; text-align: center; margin-bottom: 1rem;'>Performance Summary</h3>
+                            <p style='color: #cccccc; text-align: justify; line-height: 1.6;'>
+                                {summary}
+                            </p>
+                        </div>
+                        """.format(summary=feedback['summary']['performance_summary']), unsafe_allow_html=True)
+                    
                     # Spider Charts
                     col1, col2 = st.columns(2)
                     
@@ -274,85 +292,140 @@ def show_upload_page():
                         audio_chart = create_spider_chart(feedback['audio_feedback'], "Audio Performance")
                         st.plotly_chart(audio_chart, use_container_width=True)
                     
-                    # Visual Analysis
-                    st.markdown("""
-                    <div class='feedback-section'>
-                        <div class='section-title'>
-                            <span>Visual Analysis</span>
-                            <div class='section-line'></div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    for aspect, data in feedback['visual_feedback'].items():
-                        if aspect != "score":  # Skip the overall score
-                            st.markdown(show_aspect_feedback(aspect, data), unsafe_allow_html=True)
-                    
-                    st.markdown("</div>", unsafe_allow_html=True)
-                    
-                    # Audio Analysis (similar structure)
-                    st.markdown("""
-                    <div class='feedback-section'>
-                        <div class='section-title'>
-                            <span>Audio Analysis</span>
-                            <div class='section-line'></div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    for aspect, data in feedback['audio_feedback'].items():
-                        if aspect != "score":  # Skip the overall score
-                            st.markdown(show_aspect_feedback(aspect, data), unsafe_allow_html=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
-                    
-                    # Practice Tips
-                    st.markdown("""
-                    <div class='feedback-section tips-section'>
-                        <div class='section-title'>
-                            <span>Practice Focus</span>
-                            <div class='section-line'></div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    for category, tips in feedback['education_tips'].items():
-                        st.markdown(f"""
-                        <div class='tips-category'>
-                            <h4>{category.replace('_', ' ').title()}</h4>
-                            <div class='tips-list'>
-                                {''.join(f"<p>• {tip}</p>" for tip in tips)}
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    st.markdown("</div></div>", unsafe_allow_html=True)
+                    # Remove the Visual Analysis, Audio Analysis, and Practice Tips sections
+                    # (Delete or comment out the code that displays these sections)
                 else:
                     st.error("Analysis failed. Please try again.")
 
 def show_practice_songs_page():
-    st.markdown("<p class='section-header'>Generate Practice Songs</p>", unsafe_allow_html=True)
+    st.title("Practice Songs")
     
-    st.markdown("<div class='apple-card'>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
+    # Store the current audio path in session state
+    if 'current_audio_path' not in st.session_state:
+        st.session_state.current_audio_path = None
+    
+    # Get user preferences
+    col1, col2, col3 = st.columns(3)
     with col1:
-        instrument = st.selectbox("Instrument", ["Ukulele", "Guitar", "Piano", "Violin"], label_visibility="collapsed")
+        skill_level = st.selectbox("Skill Level:", ["beginner", "intermediate", "advanced"])
     with col2:
-        skill_level = st.slider("Skill Level", 1, 10, 5, label_visibility="collapsed")
+        instrument = st.selectbox("Instrument:", ["Piano", "Guitar", "Violin"])
+    with col3:
+        style = st.selectbox("Style:", ["classical", "jazz", "pop"])
     
-    col1, col2, col3 = st.columns([2,1,2])
-    with col2:
-        if st.button("Generate", use_container_width=True):
-            with st.spinner(""):
-                response = requests.post('http://localhost:5000/api/generate-practice-song', 
-                                      json={'skill_level': skill_level, 'instrument': instrument})
+    if st.button("Generate Practice Song"):
+        # Clean up previous audio file if it exists
+        if st.session_state.current_audio_path and os.path.exists(st.session_state.current_audio_path):
+            try:
+                os.unlink(st.session_state.current_audio_path)
+            except Exception as e:
+                print(f"Error cleaning up previous audio: {e}")
+        
+        with st.spinner("Generating your practice song..."):
+            try:
+                response = requests.post(
+                    'http://localhost:5000/api/generate-practice-song',
+                    json={
+                        'skill_level': skill_level.lower(),
+                        'instrument': instrument,
+                        'style': style
+                    }
+                )
                 
                 if response.status_code == 200:
                     song_data = response.json()
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.audio(song_data['song_url'])
-                    with col2:
-                        st.image(song_data['sheet_music'])
+                    
+                    if song_data.get('sheet_music', {}).get('audio_data'):
+                        # Create temporary files for the media
+                        audio_data = base64.b64decode(song_data['sheet_music']['audio_data'])
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as f:
+                            f.write(audio_data)
+                            audio_path = f.name
+                        
+                        # Store the new audio path
+                        st.session_state.current_audio_path = audio_path
+                        
+                        # Display the audio file
+                        st.audio(audio_path)
+                        
+                        # Display exercise instructions
+                        st.subheader("Practice Instructions")
+                        for exercise in song_data.get('exercises', []):
+                            st.write(exercise)
+                        
+                        st.subheader("Additional Notes")
+                        st.write(song_data.get('notes', ''))
+                        
+                        if 'sheet_music' in song_data:
+                            if 'sheet_music_path' in song_data['sheet_music']:
+                                sheet_music_path = song_data['sheet_music']['sheet_music_path']
+                                if os.path.exists(sheet_music_path):
+                                    st.image(sheet_music_path, caption="Sheet Music")
+                                else:
+                                    st.error(f"Sheet music file not found at {sheet_music_path}")
+                    else:
+                        st.error("Failed to generate audio. Please try again.")
                 else:
-                    st.error("Generation failed. Please try again.")
-    st.markdown("</div>", unsafe_allow_html=True)
+                    st.error("Failed to generate practice song. Please try again.")
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
+
+    if st.button("Generate Test Sheet Music"):
+        with st.spinner("Generating test sheet music..."):
+            try:
+                response = requests.get('http://localhost:5000/api/test-sheet-music')
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if 'sheet_music' in result:
+                        # Display audio
+                        if 'audio_data' in result['sheet_music']:
+                            audio_data = base64.b64decode(result['sheet_music']['audio_data'])
+                            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
+                                f.write(audio_data)
+                                st.audio(f.name)
+                        
+                        # Display PDF
+                        if 'sheet_music_path' in result['sheet_music']:
+                            sheet_music_path = result['sheet_music']['sheet_music_path']
+                            if os.path.exists(sheet_music_path):
+                                with open(sheet_music_path, "rb") as pdf_file:
+                                    PDFbyte = pdf_file.read()
+                                    
+                                    # Add download button
+                                    st.download_button(
+                                        label="Download Sheet Music PDF",
+                                        data=PDFbyte,
+                                        file_name="sheet_music.pdf",
+                                        mime='application/pdf'
+                                    )
+                                    
+                                    try:
+                                        # Try using the new PDF viewer first
+                                        st.pdf_viewer(PDFbyte)
+                                    except Exception as e:
+                                        # Fallback to base64 encoded iframe
+                                        base64_pdf = base64.b64encode(PDFbyte).decode('utf-8')
+                                        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf"></iframe>'
+                                        st.markdown(pdf_display, unsafe_allow_html=True)
+                            else:
+                                st.error(f"Sheet music file not found at {sheet_music_path}")
+                else:
+                    st.error("Failed to generate test sheet music")
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
+
+# Clean up on session end
+def cleanup_audio():
+    if hasattr(st.session_state, 'current_audio_path') and st.session_state.current_audio_path:
+        try:
+            if os.path.exists(st.session_state.current_audio_path):
+                os.unlink(st.session_state.current_audio_path)
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+
+# Register cleanup function
+atexit.register(cleanup_audio)
 
 def show_progress_tracker():
     st.markdown("<p class='section-header'>Progress Tracker</p>", unsafe_allow_html=True)
@@ -408,18 +481,23 @@ def get_style_rating(score):
 
 # Add this function to create spider charts
 def create_spider_chart(feedback_data, title):
+    """Create spider chart using actual scores from feedback data"""
     # Skip the overall score and only use individual aspects
-    categories = [k.title() for k in feedback_data.keys() if k != "score"]
+    categories = []
+    scores = []
     
-    # Create scores array (we'll use fixed scores for visual representation)
-    scores = [10, 8, 9]  # Example scores for each aspect
+    # Extract scores from feedback data
+    for k, v in feedback_data.items():
+        if k != "score":  # Skip overall score
+            categories.append(k.title())
+            scores.append(v['score'])  # Use actual score from feedback
     
     # Create the spider chart
     fig = go.Figure()
     
     # Add the data trace
     fig.add_trace(go.Scatterpolar(
-        r=scores,
+        r=scores,  # Using actual scores
         theta=categories,
         fill='toself',
         fillcolor='rgba(76, 201, 240, 0.3)',  # Light blue with transparency
@@ -432,7 +510,7 @@ def create_spider_chart(feedback_data, title):
         polar=dict(
             radialaxis=dict(
                 visible=True,
-                range=[0, 10],
+                range=[0, 10],  # Keep scale from 0 to 10
                 showline=False,
                 tickfont=dict(color='white'),
             ),
