@@ -1,0 +1,33 @@
+# .github/workflows/deploy.yml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Replace 'main' with your main branch name if different
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 16 # Or your preferred Node.js version
+        working-directory: frontend # Specify the working directory
+
+    # Important: Specify working directory for each step if needed
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+
+    - name: Build
+      working-directory: frontend
+      run: npm run build
+
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./frontend/dist # Deploy from the 'frontend/dist' directory
