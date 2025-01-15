@@ -9,6 +9,18 @@ import base64
 import os
 import atexit
 from pathlib import Path
+from openai import OpenAI
+from dotenv import load_dotenv
+
+# Load environment variables from backend's .env file
+load_dotenv(os.path.join(os.path.dirname(__file__), 'backend', '.env'))
+
+# Initialize OpenAI client with API key from backend
+api_key = os.getenv('OPENAI_API_KEY')
+if not api_key:
+    raise ValueError("OPENAI_API_KEY not found in environment variables. Please check backend/.env file")
+
+openai_client = OpenAI(api_key=api_key)
 
 # Set up static directory path
 STATIC_DIR = Path("static/sheet_music").absolute()
@@ -213,6 +225,12 @@ def main():
 def show_upload_page():
     st.markdown("<p class='section-header'>Upload Your Performance</p>", unsafe_allow_html=True)
     
+    # Initialize session state if needed
+    if 'feedback' not in st.session_state:
+        st.session_state.feedback = None
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
     uploaded_file = st.file_uploader("", type=['mp4', 'mov'])
     
     if uploaded_file is not None:
@@ -228,90 +246,155 @@ def show_upload_page():
                 response = requests.post('http://localhost:5000/api/analyze-performance', files=files)
                 
                 if response.status_code == 200:
-                    feedback = response.json()
-                    
-                    # Display Summary Grades
-                    col1, col2, col3 = st.columns(3)
-                    visual_grade, visual_color = feedback['summary']['visual_grade']
-                    audio_grade, audio_color = feedback['summary']['audio_grade']
-                    overall_grade, overall_color = feedback['summary']['overall_grade']
-                    
-                    st.markdown("""
-                    <div class='grade-summary'>
-                        <h2>Performance Summary</h2>
-                        <div class='grade-container'>
-                            <div class='grade-section'>
-                                <span class='grade-label'>Visual Performance</span>
-                                <span class='grade-value' style='color: {visual_color}'>{visual_grade}</span>
-                            </div>
-                            <div class='grade-section'>
-                                <span class='grade-label'>Audio Performance</span>
-                                <span class='grade-value' style='color: {audio_color}'>{audio_grade}</span>
-                            </div>
-                            <div class='grade-section overall'>
-                                <span class='grade-label'>Overall Rating</span>
-                                <span class='grade-value {ultra_class}' style='color: {overall_color}'>{overall_grade}</span>
-                            </div>
-                        </div>
-                    </div>
-                    """.format(
-                        visual_grade=visual_grade, visual_color=visual_color,
-                        audio_grade=audio_grade, audio_color=audio_color,
-                        overall_grade=overall_grade, overall_color=overall_color,
-                        ultra_class='ultra' if overall_grade == 'ULTRA' else ''
-                    ), unsafe_allow_html=True)
-                    
-                    if 'performance_summary' in feedback['summary']:
-                        st.markdown("""
-                        <div style='background: #242424; padding: 1.5rem; border-radius: 15px; margin: 2rem 0;'>
-                            <h3 style='color: white; text-align: center; margin-bottom: 1rem;'>Performance Summary</h3>
-                            <p style='color: #cccccc; text-align: justify; line-height: 1.6;'>
-                                {summary}
-                            </p>
-                        </div>
-                        """.format(summary=feedback['summary']['performance_summary']), unsafe_allow_html=True)
-                    
-                    # Spider Charts
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.markdown("""
-                        <div style='background: #242424; padding: 1rem; border-radius: 10px;'>
-                            <h3 style='color: white; text-align: center; margin-bottom: 1rem;'>Visual Performance Analysis</h3>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        visual_chart = create_spider_chart(feedback['visual_feedback'], "Visual Performance")
-                        st.plotly_chart(visual_chart, use_container_width=True)
-                    
-                    with col2:
-                        st.markdown("""
-                        <div style='background: #242424; padding: 1rem; border-radius: 10px;'>
-                            <h3 style='color: white; text-align: center; margin-bottom: 1rem;'>Audio Performance Analysis</h3>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        audio_chart = create_spider_chart(feedback['audio_feedback'], "Audio Performance")
-                        st.plotly_chart(audio_chart, use_container_width=True)
-                    
-                    # Remove the Visual Analysis, Audio Analysis, and Practice Tips sections
-                    # (Delete or comment out the code that displays these sections)
+                    st.session_state.feedback = response.json()
+                    st.session_state.chat_history = []  # Reset chat history for new analysis
                 else:
                     st.error("Analysis failed. Please try again.")
+    
+    # Display feedback if it exists in session state
+    if st.session_state.feedback:
+        feedback = st.session_state.feedback
+        
+        # Display grades
+        visual_grade, visual_color = feedback['summary']['visual_grade']
+        audio_grade, audio_color = feedback['summary']['audio_grade']
+        overall_grade, overall_color = feedback['summary']['overall_grade']
+        
+        st.markdown("""
+        <div class='grade-summary'>
+            <h2>Performance Summary</h2>
+            <div class='grade-container'>
+                <div class='grade-section'>
+                    <span class='grade-label'>Visual Performance</span>
+                    <span class='grade-value' style='color: {visual_color}'>{visual_grade}</span>
+                </div>
+                <div class='grade-section'>
+                    <span class='grade-label'>Audio Performance</span>
+                    <span class='grade-value' style='color: {audio_color}'>{audio_grade}</span>
+                </div>
+                <div class='grade-section overall'>
+                    <span class='grade-label'>Overall Rating</span>
+                    <span class='grade-value {ultra_class}' style='color: {overall_color}'>{overall_grade}</span>
+                </div>
+            </div>
+        </div>
+        """.format(
+            visual_grade=visual_grade, visual_color=visual_color,
+            audio_grade=audio_grade, audio_color=audio_color,
+            overall_grade=overall_grade, overall_color=overall_color,
+            ultra_class='ultra' if overall_grade == 'ULTRA' else ''
+        ), unsafe_allow_html=True)
+        
+        # Display performance summary
+        if 'performance_summary' in feedback['summary']:
+            st.markdown("""
+            <div style='background: #242424; padding: 1.5rem; border-radius: 15px; margin: 2rem 0;'>
+                <h3 style='color: white; text-align: center; margin-bottom: 1rem;'>Performance Summary</h3>
+                <p style='color: #cccccc; text-align: justify; line-height: 1.6;'>
+                    {summary}
+                </p>
+            </div>
+            """.format(summary=feedback['summary']['performance_summary']), unsafe_allow_html=True)
+        
+        # Chat interface
+        # Display chat history first
+        for message in st.session_state.chat_history:
+            role_color = "#4CC9F0" if message["role"] == "assistant" else "#FF6B6B"
+            st.markdown(f"""
+            <div style='margin: 1rem 0; padding: 1rem; background: #2d2d2d; border-radius: 10px;'>
+                <p style='color: {role_color}; margin-bottom: 0.5rem; font-weight: bold;'>
+                    {"AI Teacher" if message["role"] == "assistant" else "You"}:
+                </p>
+                <p style='color: #cccccc; margin: 0;'>{message["content"]}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Create a container for the chat form
+        chat_container = st.container()
+        
+        # Then show the chat input form within the container
+        with chat_container:
+            with st.form(key="chat_form", clear_on_submit=True):
+                user_question = st.text_input(
+                    "Ask the AI Music Teacher about your performance, music theory, or how to improve...",
+                    key="chat_input"
+                )
+                submit_button = st.form_submit_button("Ask", type="primary", help="Press Enter to send")
+                
+                if submit_button and user_question:
+                    st.session_state.chat_history.append({"role": "user", "content": user_question})
+                    
+                    try:
+                        response = openai_client.chat.completions.create(
+                            model="gpt-3.5-turbo",
+                            messages=[
+                                {
+                                    "role": "system",
+                                    "content": "You are a knowledgeable and encouraging music teacher. Use your expertise to answer questions about music theory, technique, performance, and practice strategies. Reference the student's recent performance analysis when relevant."
+                                },
+                                {
+                                    "role": "user",
+                                    "content": f"""Context - Recent Performance Analysis:
+                                    Visual Score: {feedback['visual_feedback']['score']}
+                                    Audio Score: {feedback['audio_feedback']['score']}
+                                    
+                                    Student Question: {user_question}"""
+                                }
+                            ],
+                            max_tokens=300,
+                            temperature=0.7
+                        )
+                        
+                        ai_response = response.choices[0].message.content
+                        st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"Failed to get AI response: {str(e)}")
+        
+        # Spider Charts
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            <div style='background: #242424; padding: 1rem; border-radius: 10px;'>
+                <h3 style='color: white; text-align: center; margin-bottom: 1rem;'>Visual Performance Analysis</h3>
+            </div>
+            """, unsafe_allow_html=True)
+            visual_chart = create_spider_chart(feedback['visual_feedback'], "Visual Performance")
+            st.plotly_chart(visual_chart, use_container_width=True)
+        
+        with col2:
+            st.markdown("""
+            <div style='background: #242424; padding: 1rem; border-radius: 10px;'>
+                <h3 style='color: white; text-align: center; margin-bottom: 1rem;'>Audio Performance Analysis</h3>
+            </div>
+            """, unsafe_allow_html=True)
+            audio_chart = create_spider_chart(feedback['audio_feedback'], "Audio Performance")
+            st.plotly_chart(audio_chart, use_container_width=True)
 
 def show_practice_songs_page():
     st.title("Practice Songs")
     
-    # Store the current audio path in session state
-    if 'current_audio_path' not in st.session_state:
-        st.session_state.current_audio_path = None
+    # Get practice focus from session state if available
+    default_instrument = st.session_state.get('practice_focus', {}).get('instrument', "Piano")
+    default_style = st.session_state.get('practice_focus', {}).get('style', "classical")
     
-    # Get user preferences
+    # Clear practice focus after using it
+    if 'practice_focus' in st.session_state:
+        del st.session_state.practice_focus
+    
+    # Get user preferences with defaults from analysis
     col1, col2, col3 = st.columns(3)
     with col1:
         skill_level = st.selectbox("Skill Level:", ["beginner", "intermediate", "advanced"])
     with col2:
-        instrument = st.selectbox("Instrument:", ["Piano", "Guitar", "Violin"])
+        instrument = st.selectbox("Instrument:", 
+                                ["Piano", "Guitar", "Ukelele", "Voice"], 
+                                index=["Piano", "Guitar", "Ukelele", "Voice"].index(default_instrument))
     with col3:
-        style = st.selectbox("Style:", ["classical", "jazz", "pop"])
+        style = st.selectbox("Style:", ["classical", "jazz", "pop"], 
+                           index=["classical", "jazz", "pop"].index(default_style))
     
     if st.button("Generate Practice Song"):
         # Clean up previous audio file if it exists
@@ -528,6 +611,34 @@ def create_spider_chart(feedback_data, title):
     )
     
     return fig
+
+# Add this function to determine practice focus based on feedback
+def determine_practice_focus(feedback):
+    """Determine which aspects need the most practice based on scores"""
+    visual_scores = {k: v['score'] for k, v in feedback['visual_feedback'].items() if k != 'score'}
+    audio_scores = {k: v['score'] for k, v in feedback['audio_feedback'].items() if k != 'score'}
+    
+    # Combine all scores
+    all_scores = {**visual_scores, **audio_scores}
+    
+    # Find the lowest scoring aspects (areas that need practice)
+    sorted_aspects = sorted(all_scores.items(), key=lambda x: x[1])
+    weakest_aspects = sorted_aspects[:2]  # Get the two lowest scoring aspects
+    
+    # Map aspects to instrument and style suggestions
+    aspect_to_practice = {
+        'expressiveness': {'instrument': 'Piano', 'style': 'classical'},
+        'movement': {'instrument': 'Guitar', 'style': 'jazz'},
+        'technique': {'instrument': 'Piano', 'style': 'classical'},
+        'tempo': {'instrument': 'Guitar', 'style': 'pop'},
+        'pitch': {'instrument': 'Voice', 'style': 'classical'},
+        'rhythm': {'instrument': 'Ukelele', 'style': 'pop'}
+    }
+    
+    # Get practice suggestions for the weakest aspect
+    primary_focus = aspect_to_practice.get(weakest_aspects[0][0], {'instrument': 'Piano', 'style': 'classical'})
+    
+    return primary_focus, weakest_aspects[0][0]
 
 if __name__ == "__main__":
     main()
