@@ -29,11 +29,11 @@ streamlit run app.py
 
 ## 🛠️ Technologies Used
 
--   **Frontend:** [Streamlit](https://streamlit.io/) (A modern and efficient alternative to React, ideal for rapid prototyping and data-driven applications)
--   **Vision:** [Nebius AI](https://nebius.com/) (Replace with the actual link if available)
--   **Education Advice:** [OpenNote](https://opennote.io/) (Replace with the actual link if available) (LLM for educational content)
--   **Music Generation:** [Beethoven.ai](beethoven.ai) (Replace with the actual link if available)
--   **Database & Users:** [Supabase](https://supabase.com/) (Replace with the actual link if available)
+-   **Frontend:** [Streamlit](https://streamlit.io/) 
+-   **Vision:** [Nebius AI](https://nebius.com/) 
+-   **Education Advice:** [OpenNote](https://opennote.io/)
+-   **Music Generation:** [Beethoven.ai](beethoven.ai) 
+-   **Database & Users:** [Supabase](https://supabase.com/)
 
 ## 🚀 How to Use
 
