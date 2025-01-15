@@ -1,11 +1,28 @@
-This is a music education app that uses vision model, sound and a LLM to teach people how to play the instruments better.( better as in style, tempo, confidence, and creative writing)
+# 🎵 MusicTeacher
 
-Using magic loops to make the UI, use codebuff for coding, Nebius Ai for Vision, opennote for education advice, Beethoven.Ai for music gen.
+Welcome to MusicTeacher, your AI-powered music learning companion! This app leverages the power of a vision model, sound analysis, and a Large Language Model (LLM) to help you elevate your musical skills. MusicTeacher focuses on enhancing your style, tempo, confidence, and even your creative writing abilities related to music.
 
-To use, you must upload a video of you playing an instrument, i.e. the ukelele and by using vision and sound, the app suggests tips to improve. And generates a song to practice with.
+## ✨ Features
 
-Basically, upload vid, get feedback. Gen song, play it + upload vid, more feedback.(style, tempo, other stuff)
+-   **Upload & Analyze:** Upload a video of you playing an instrument (e.g., ukulele). Our app utilizes computer vision and sound analysis to provide detailed feedback on your technique.
+-   **Practice Songs:** MusicTeacher generates practice songs tailored to your skill level and instrument. You'll receive sheet music, audio playback, and additional notes to guide your practice.
+-   **Progress Tracker:** Track your musical journey and improvement over time with scores and visualizations. (Coming soon!)
 
-All wrapped up in a pretty and modern react UI.
+## 🛠️ Technologies Used
 
-in technical terms, supabase for db and users, nebius ai for vision, opennote for education advice (LLM), and beethoven ai for music gen.
+-   **Frontend:** [Streamlit](https://streamlit.io/) (A modern and efficient alternative to React, ideal for rapid prototyping and data-driven applications)
+-   **Vision:** [Nebius AI](https://nebius.com/) (Replace with the actual link if available)
+-   **Education Advice:** [OpenNote](https://opennote.io/) (Replace with the actual link if available) (LLM for educational content)
+-   **Music Generation:** [Beethoven.ai](beethoven.ai) (Replace with the actual link if available)
+-   **Database & Users:** [Supabase](https://supabase.com/) (Replace with the actual link if available)
+
+## 🚀 How to Use
+
+1. **Upload a video** of yourself playing your instrument.
+2. **Get feedback** on your performance, including aspects like style, tempo, and more.
+3. **Generate a practice song** customized to your needs and play it.
+4. **Upload a new video** of your practice session to receive further feedback and refine your skills.
+
+## 🌙 Dark Mode
+
+The application supports a dark mode for a more comfortable viewing experience. You can toggle dark mode on or off in the sidebar.
