@@ -21,7 +21,7 @@ python app.py
 ```
 
 ### Frontend
-
+``` zsh 
 cd fronted
 streamlit run app.py
 
