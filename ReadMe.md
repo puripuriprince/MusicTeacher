@@ -2,21 +2,29 @@
 
 Welcome to MusicTeacher, your AI-powered music learning companion! This app leverages the power of a vision model, sound analysis, and a Large Language Model (LLM) to help you elevate your musical skills. MusicTeacher focuses on enhancing your style, tempo, confidence, and even your creative writing abilities related to music.
 
+
+![1736971821901](image/ReadMe/1736971821901.png)
+
 ## ✨ Features
 
--   **Upload & Analyze:** Upload a video of you playing an instrument (e.g., ukulele). Our app utilizes computer vision and sound analysis to provide detailed feedback on your technique.
--   **Practice Songs:** MusicTeacher generates practice songs tailored to your skill level and instrument. You'll receive sheet music, audio playback, and additional notes to guide your practice.
--   **Progress Tracker:** Track your musical journey and improvement over time with scores and visualizations. (Coming soon!)
+- **Upload & Analyze:** Upload a video of you playing an instrument (e.g., ukulele). Our app utilizes computer vision and sound analysis to provide detailed feedback on your technique.
+- **Practice Songs:** MusicTeacher generates practice songs tailored to your skill level and instrument. You'll receive sheet music, audio playback, and additional notes to guide your practice.
+- **Progress Tracker:** Track your musical journey and improvement over time with scores and visualizations. (Coming soon!)
 
 ## 👩‍💻 Running
-### Backend 
-``` zsh
+
+### Backend
+
+```zsh
 cd backend
 python app.py
 ```
+
 ### Frontend
+
 cd fronted
 streamlit run app.py
+
 ```
 
 ## 🛠️ Technologies Used
@@ -37,3 +45,4 @@ streamlit run app.py
 ## 🌙 Dark Mode
 
 The application supports a dark mode for a more comfortable viewing experience. You can toggle dark mode on or off in the sidebar.
+```
