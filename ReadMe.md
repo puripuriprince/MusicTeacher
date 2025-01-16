@@ -46,3 +46,5 @@ streamlit run app.py
 
 The application supports a dark mode for a more comfortable viewing experience. You can toggle dark mode on or off in the sidebar.
 ```
+
+there was a bug with github and I lost alot of stuff, any questions dont hesitate to message lucascielo2003@gmail.com, everything is in the reflog its just harder to naviguate
